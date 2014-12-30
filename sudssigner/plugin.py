@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
 from __future__ import with_statement
 from suds.plugin import MessagePlugin
 from lxml import etree
-from suds.bindings.binding import envns
+# from suds.bindings.binding import envns
 from suds.wsse import wsuns, dsns, wssens
 from libxml2_wrapper import LibXML2ParsedDocument
 from xmlsec_wrapper import XmlSecSignatureContext, init_xmlsec, deinit_xmlsec
@@ -12,6 +13,7 @@ from uuid import uuid4
 
 import xmlsec
 
+envns = ('SOAP-ENV', 'http://www.w3.org/2003/05/soap-envelope')
 
 def lxml_ns(suds_ns):
     return dict((suds_ns,))
@@ -32,7 +34,6 @@ AttrValueType = 'ValueType'
 NodeBinarySecurityToken = 'BinarySecurityToken'
 NodeSecurity = 'Security'
 NodeSecurityTokenReference = 'SecurityTokenReference'
-
 
 LXML_ENV = lxml_ns(envns)
 BODY_XPATH = etree.XPath('/SOAP-ENV:Envelope/SOAP-ENV:Body', namespaces=LXML_ENV)
@@ -75,7 +76,10 @@ class SignerPlugin(MessagePlugin):
     def load_keyfile(self):
         cert = file(self.keyfile, 'rb').read()
         self.cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert)
-        self.privatekey = crypto.load_privatekey(crypto.FILETYPE_PEM, cert)
+        try:
+            self.privatekey = crypto.load_privatekey(crypto.FILETYPE_PEM, cert)
+        except:
+            pass
 
     def handle_keytype(self, keytype):
         if keytype is None:
@@ -152,7 +156,7 @@ class SignerPlugin(MessagePlugin):
         x509_issuer_name = etree.SubElement(x509_issuer_serial,
                 ns_id(xmlsec.NodeX509IssuerName, dsns))
         x509_issuer_name.text = ', '.join(
-                '='.join(c) for c in self.cert.get_issuer().get_components())
+                u'='.join(cv.decode('utf-8') for cv in c) for c in self.cert.get_issuer().get_components())
         x509_serial_number = etree.SubElement(x509_issuer_serial,
                 ns_id(xmlsec.NodeX509SerialNumber, dsns))
         x509_serial_number.text = str(self.cert.get_serial_number())
